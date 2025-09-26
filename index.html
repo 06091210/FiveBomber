@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>リアルタイム変声デモ（Tone.js）</title>
+<style>
+  body { font-family: sans-serif; padding:20px; }
+  label { display:block; margin-top:10px; }
+  input[type="range"] { width: 300px; }
+  #status { margin-top:12px; color: green; }
+</style>
+</head>
+<body>
+  <h1>リアルタイム変声デモ（WebAudio + Tone.js）</h1>
+
+  <button id="startBtn">マイク開始</button>
+  <button id="stopBtn" disabled>停止</button>
+
+  <label>ピッチ（半音）: <span id="pitchVal">0</span>
+    <input id="pitch" type="range" min="-12" max="12" step="1" value="0">
+  </label>
+
+  <label>フォルマント（高域ブースト）: <span id="formVal">0</span>
+    <input id="form" type="range" min="-12" max="12" step="1" value="0">
+  </label>
+
+  <label>リバーブ量: <span id="revVal">0.2</span>
+    <input id="reverb" type="range" min="0" max="0.9" step="0.05" value="0.2">
+  </label>
+
+  <div id="status">停止中</div>
+
+  <script src="https://unpkg.com/tone@next/build/Tone.js"></script>
+  <script>
+    // Tone.js を使った簡易リアルタイム変声
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn  = document.getElementById('stopBtn');
+    const status   = document.getElementById('status');
+
+    const pitchSlider = document.getElementById('pitch');
+    const formSlider  = document.getElementById('form');
+    const reverbSlider= document.getElementById('reverb');
+    const pitchVal = document.getElementById('pitchVal');
+    const formVal  = document.getElementById('formVal');
+    const revVal   = document.getElementById('revVal');
+
+    let mic, pitchShift, highShelf, reverb;
+
+    async function start() {
+      // ToneのAudioContext起動（ユーザ操作要）
+      await Tone.start();
+      status.textContent = 'マイク取得中…';
+      try {
+        mic = new Tone.UserMedia();
+        // PitchShiftノード（Tone.js）
+        pitchShift = new Tone.PitchShift({pitch: 0, windowSize:0.1, delayTime:0.05, feedback:0});
+        // フォルマントっぽくするためのハイシェルフEQ
+        highShelf = new Tone.EQ3(0, 0, 0); // low, mid, high
+        // 簡易リバーブ
+        reverb = new Tone.Reverb({ decay: 2, preDelay: 0.01 });
+        await reverb.generate();
+
+        // ルーティング: mic -> pitchShift -> highShelf -> reverb -> destination
+        mic.connect(pitchShift);
+        pitchShift.connect(highShelf);
+        highShelf.connect(reverb);
+        reverb.toDestination();
+
+        await mic.open(); // マイク開始
+        status.textContent = '動作中 — マイク入力を変換して再生しています';
+        startBtn.disabled = true;
+        stopBtn.disabled  = false;
+      } catch (e) {
+        console.error(e);
+        status.textContent = 'マイクが取得できませんでした: ' + e.message;
+      }
+    }
+
+    function stop() {
+      if (mic) {
+        mic.close();
+        mic.disconnect();
+      }
+      if (pitchShift) pitchShift.disconnect();
+      if (highShelf) highShelf.disconnect();
+      if (reverb) reverb.disconnect();
+      startBtn.disabled = false;
+      stopBtn.disabled  = true;
+      status.textContent = '停止中';
+    }
+
+    // コントロール反映
+    pitchSlider.addEventListener('input', () => {
+      const semi = Number(pitchSlider.value);
+      pitchVal.textContent = semi;
+      if (pitchShift) pitchShift.pitch = semi;
+    });
+    formSlider.addEventListener('input', () => {
+      const v = Number(formSlider.value);
+      formVal.textContent = v;
+      // 高域をブーストして「声質」を少し変える（簡易）
+      // EQ3のパラメータは [low, mid, high] (dB)
+      if (highShelf) highShelf.high.value = v;
+    });
+    reverbSlider.addEventListener('input', () => {
+      const r = Number(reverbSlider.value);
+      revVal.textContent = r;
+      if (reverb) reverb.wet.value = r;
+    });
+
+    startBtn.addEventListener('click', start);
+    stopBtn.addEventListener('click', stop);
+  </script>
+</body>
+</html>
