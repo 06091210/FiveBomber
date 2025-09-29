@@ -101,14 +101,7 @@
     pickBtn.addEventListener('click', () => {
       const sel = select.value;
       let sourceArray = [];
-
-      if (sel === 'custom') {
-        // カンマ区切りで分割して前後の空白を削除、空要素を除去
-        const raw = customInput.value;
-        sourceArray = raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
-      } else {
-        sourceArray = arrays[sel] || [];
-      }
+      sourceArray = arrays[sel] || [];
 
       const picked = pickRandomFromArray(sourceArray);
       if (picked === null) {
@@ -117,17 +110,6 @@
         resultEl.textContent = picked;
       }
     });
-
-    // Enter キーでボタンと同じ挙動にする（入力欄でもOK）
-    customInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        pickBtn.click();
-      }
-    });
-
-    // 初期表示（選択した配列の最初の要素などを出す場合はここを編集）
-    resultEl.textContent = '';
 
     // BGM 用の <audio> 要素（ループ）
     const bgm = new Audio('BGM.mp3');
@@ -202,6 +184,8 @@
       bgm.pause();
       bgm.currentTime = 0;
     });
+    
+    resultEl.textContent = '';
   </script>
 </body>
 </html>
