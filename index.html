@@ -30,15 +30,8 @@
       border: none;
       cursor: pointer;
     }
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-      width: 320px;
-      text-align: center;
-    }
-    select, input, textarea {
+    
+    select {
       font-size: 16px;
       padding: 8px;
       margin: 8px 0;
@@ -49,6 +42,7 @@
     }
     h1 { font-size: 28px; margin: 18px 0; min-height: 40px; }
     .small { font-size: 13px; color:#666; }
+    
     button:active { transform: translateY(1px); }
     .start { background:#3b82f6; color:white; }
     .stop  { background:#ef4444; color:white; }
@@ -59,27 +53,15 @@
 </head>
 <body>
   <div class="panel" role="region" aria-label="サウンドコントロール">
-    <h2>サウンド再生デモ</h2>
-    <div class="card" role="region" aria-label="配列からランダム表示">
-    <h2>配列ランダム表示</h2>
 
-    <label for="arraySelect">配列を選んでください：</label>
     <select id="arraySelect" aria-label="配列選択">
-      <option value="fruits">fruits（果物）</option>
-      <option value="animals">animals（動物）</option>
-      <option value="colors">colors（色）</option>
-      <option value="custom">custom（カスタム）</option>
+      <option value="easy">簡単</option>
+      <option value="normal">普通</option>
+      <option value="difficult">難しい</option>
+      <option value="impossible">鬼むず</option>
     </select>
-
-    <label for="customInput" class="small">custom を選んだ時の要素（カンマ区切り）：</label>
-    <input id="customInput" placeholder="例: 赤,青,黄,緑" aria-label="カスタム配列入力">
-
     <button id="pickBtn">ランダムに表示する</button>
-
     <h1 id="result" aria-live="polite"></h1>
-
-    <div class="small">※ 配列はコード内で自由に編集できます。</div>
-  </div>
 
     <div>
       <button id="startBtn" class="start">スタート（BGM再生）</button>
@@ -91,15 +73,16 @@
       <button id="wrongBtn" class="sfx-ng">不正解</button>
     </div>
 
-    <div class="note" id="message">音声ファイルはこのHTMLと同じフォルダに置いてください：BGM.mp3, 正解.mp3, 不正解.mp3</div>
+    <!--<div class="note" id="message"></div>-->
   </div>
 
   <script>
 
     const arrays = {
-      fruits: ["りんご", "みかん", "バナナ", "ぶどう", "いちご"],
-      animals: ["ねこ", "いぬ", "うさぎ", "きつね", "くま"],
-      colors: ["赤", "青", "緑", "黄", "紫"]
+      easy: ["りんご", "みかん", "バナナ", "ぶどう", "いちご"],
+      normal: ["ねこ", "いぬ", "うさぎ", "きつね", "くま"],
+      difficult: ["世界遺産", "世界の首都", "世界の古代文明", "スポーツ選手", "世界の大国", "太陽系の惑星"],
+      impossible: ["元素記号", "コンビニの名前"]
     };
 
     const select = document.getElementById('arraySelect');
