@@ -1,115 +1,134 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8" />
-<title>リアルタイム変声デモ（Tone.js）</title>
-<style>
-  body { font-family: sans-serif; padding:20px; }
-  label { display:block; margin-top:10px; }
-  input[type="range"] { width: 300px; }
-  #status { margin-top:12px; color: green; }
-</style>
+  <meta charset="utf-8" />
+  <title>サウンド再生デモ</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, "Hiragino Kaku Gothic ProN", "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg,#f8fafc,#e6eef8);
+    }
+    .panel {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+    button {
+      font-size: 16px;
+      padding: 10px 16px;
+      margin: 8px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+    button:active { transform: translateY(1px); }
+    .start { background:#3b82f6; color:white; }
+    .stop  { background:#ef4444; color:white; }
+    .sfx-ok { background:#10b981; color:white; }
+    .sfx-ng { background:#f97316; color:white; }
+    .note { font-size:13px; color:#666; margin-top:8px; }
+  </style>
 </head>
 <body>
-  <h1>リアルタイム変声デモ（WebAudio + Tone.js）</h1>
+  <div class="panel" role="region" aria-label="サウンドコントロール">
+    <h2>サウンド再生デモ</h2>
 
-  <button id="startBtn">マイク開始</button>
-  <button id="stopBtn" disabled>停止</button>
+    <div>
+      <button id="startBtn" class="start">スタート（BGM再生）</button>
+      <button id="stopBtn" class="stop">停止（BGM停止）</button>
+    </div>
 
-  <label>ピッチ（半音）: <span id="pitchVal">0</span>
-    <input id="pitch" type="range" min="-12" max="12" step="1" value="0">
-  </label>
+    <div>
+      <button id="correctBtn" class="sfx-ok">正解</button>
+      <button id="wrongBtn" class="sfx-ng">不正解</button>
+    </div>
 
-  <label>フォルマント（高域ブースト）: <span id="formVal">0</span>
-    <input id="form" type="range" min="-12" max="12" step="1" value="0">
-  </label>
+    <div class="note" id="message">音声ファイルはこのHTMLと同じフォルダに置いてください：BGM.mp3, 正解.mp3, 不正解.mp3</div>
+  </div>
 
-  <label>リバーブ量: <span id="revVal">0.2</span>
-    <input id="reverb" type="range" min="0" max="0.9" step="0.05" value="0.2">
-  </label>
-
-  <div id="status">停止中</div>
-
-  <script src="https://unpkg.com/tone@next/build/Tone.js"></script>
   <script>
-    // Tone.js を使った簡易リアルタイム変声
+    // BGM 用の <audio> 要素（ループ）
+    const bgm = new Audio('BGM.mp3');
+    bgm.loop = true;
+    bgm.preload = 'auto';
+    bgm.volume = 0.6; // 必要に応じて調整
+
+    // 効果音は重ねて再生できるよう、新しい Audio インスタンスを毎回作る方式にする
+    function playSFX(src, opts = {}) {
+      try {
+        const s = new Audio(src);
+        s.preload = 'auto';
+        if (opts.volume !== undefined) s.volume = opts.volume;
+        // 再生の promise を返す（失敗は catch で扱う）
+        const p = s.play();
+        if (p !== undefined) {
+          p.catch(e => {
+            // autoplay 制限などのエラーをユーザーに知らせる
+            console.warn('SFX 再生に失敗しました:', e);
+            showMessage('ブラウザの制限で効果音の再生がブロックされました。ページ上で何かをクリックしてから再試行してください。');
+          });
+        }
+      } catch (err) {
+        console.error('playSFX エラー', err);
+      }
+    }
+
+    // UI 要素
     const startBtn = document.getElementById('startBtn');
     const stopBtn  = document.getElementById('stopBtn');
-    const status   = document.getElementById('status');
+    const correctBtn = document.getElementById('correctBtn');
+    const wrongBtn   = document.getElementById('wrongBtn');
+    const messageEl  = document.getElementById('message');
 
-    const pitchSlider = document.getElementById('pitch');
-    const formSlider  = document.getElementById('form');
-    const reverbSlider= document.getElementById('reverb');
-    const pitchVal = document.getElementById('pitchVal');
-    const formVal  = document.getElementById('formVal');
-    const revVal   = document.getElementById('revVal');
+    function showMessage(text) {
+      messageEl.textContent = text;
+      setTimeout(() => {
+        messageEl.textContent = '音声ファイルはこのHTMLと同じフォルダに置いてください：BGM.mp3, 正解.mp3, 不正解.mp3';
+      }, 3500);
+    }
 
-    let mic, pitchShift, highShelf, reverb;
-
-    async function start() {
-      // ToneのAudioContext起動（ユーザ操作要）
-      await Tone.start();
-      status.textContent = 'マイク取得中…';
+    // スタート（ユーザー操作なので自動再生ブロックは回避できるはず）
+    startBtn.addEventListener('click', async () => {
       try {
-        mic = new Tone.UserMedia();
-        // PitchShiftノード（Tone.js）
-        pitchShift = new Tone.PitchShift({pitch: 0, windowSize:0.1, delayTime:0.05, feedback:0});
-        // フォルマントっぽくするためのハイシェルフEQ
-        highShelf = new Tone.EQ3(0, 0, 0); // low, mid, high
-        // 簡易リバーブ
-        reverb = new Tone.Reverb({ decay: 2, preDelay: 0.01 });
-        await reverb.generate();
-
-        // ルーティング: mic -> pitchShift -> highShelf -> reverb -> destination
-        mic.connect(pitchShift);
-        pitchShift.connect(highShelf);
-        highShelf.connect(reverb);
-        reverb.toDestination();
-
-        await mic.open(); // マイク開始
-        status.textContent = '動作中 — マイク入力を変換して再生しています';
-        startBtn.disabled = true;
-        stopBtn.disabled  = false;
-      } catch (e) {
-        console.error(e);
-        status.textContent = 'マイクが取得できませんでした: ' + e.message;
+        await bgm.play();
+        showMessage('BGM を再生中（ループ）');
+      } catch (err) {
+        console.warn('BGM 再生失敗:', err);
+        showMessage('BGM の再生がブロックされました。画面を操作してから再度試してください。');
       }
-    }
-
-    function stop() {
-      if (mic) {
-        mic.close();
-        mic.disconnect();
-      }
-      if (pitchShift) pitchShift.disconnect();
-      if (highShelf) highShelf.disconnect();
-      if (reverb) reverb.disconnect();
-      startBtn.disabled = false;
-      stopBtn.disabled  = true;
-      status.textContent = '停止中';
-    }
-
-    // コントロール反映
-    pitchSlider.addEventListener('input', () => {
-      const semi = Number(pitchSlider.value);
-      pitchVal.textContent = semi;
-      if (pitchShift) pitchShift.pitch = semi;
-    });
-    formSlider.addEventListener('input', () => {
-      const v = Number(formSlider.value);
-      formVal.textContent = v;
-      // 高域をブーストして「声質」を少し変える（簡易）
-      // EQ3のパラメータは [low, mid, high] (dB)
-      if (highShelf) highShelf.high.value = v;
-    });
-    reverbSlider.addEventListener('input', () => {
-      const r = Number(reverbSlider.value);
-      revVal.textContent = r;
-      if (reverb) reverb.wet.value = r;
     });
 
-    startBtn.addEventListener('click', start);
-    stopBtn.addEventListener('click', stop);
+    // 停止
+    stopBtn.addEventListener('click', () => {
+      bgm.pause();
+      bgm.currentTime = 0;
+      showMessage('BGM を停止しました');
+    });
+
+    // 正解ボタン（BGM再生中でも別音で鳴る）
+    correctBtn.addEventListener('click', () => {
+      playSFX('正解.mp3', { volume: 1.0 });
+    });
+
+    // 不正解ボタン（BGM再生中でも別音で鳴る）
+    wrongBtn.addEventListener('click', () => {
+      playSFX('不正解.mp3', { volume: 1.0 });
+    });
+
+    // （オプション）ページ離脱時に音を止める
+    window.addEventListener('beforeunload', () => {
+      bgm.pause();
+      bgm.currentTime = 0;
+    });
   </script>
 </body>
 </html>
