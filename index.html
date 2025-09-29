@@ -30,6 +30,25 @@
       border: none;
       cursor: pointer;
     }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+      width: 320px;
+      text-align: center;
+    }
+    select, input, textarea {
+      font-size: 16px;
+      padding: 8px;
+      margin: 8px 0;
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+    }
+    h1 { font-size: 28px; margin: 18px 0; min-height: 40px; }
+    .small { font-size: 13px; color:#666; }
     button:active { transform: translateY(1px); }
     .start { background:#3b82f6; color:white; }
     .stop  { background:#ef4444; color:white; }
@@ -41,6 +60,26 @@
 <body>
   <div class="panel" role="region" aria-label="サウンドコントロール">
     <h2>サウンド再生デモ</h2>
+    <div class="card" role="region" aria-label="配列からランダム表示">
+    <h2>配列ランダム表示</h2>
+
+    <label for="arraySelect">配列を選んでください：</label>
+    <select id="arraySelect" aria-label="配列選択">
+      <option value="fruits">fruits（果物）</option>
+      <option value="animals">animals（動物）</option>
+      <option value="colors">colors（色）</option>
+      <option value="custom">custom（カスタム）</option>
+    </select>
+
+    <label for="customInput" class="small">custom を選んだ時の要素（カンマ区切り）：</label>
+    <input id="customInput" placeholder="例: 赤,青,黄,緑" aria-label="カスタム配列入力">
+
+    <button id="pickBtn">ランダムに表示する</button>
+
+    <h1 id="result" aria-live="polite"></h1>
+
+    <div class="small">※ 配列はコード内で自由に編集できます。</div>
+  </div>
 
     <div>
       <button id="startBtn" class="start">スタート（BGM再生）</button>
@@ -56,6 +95,57 @@
   </div>
 
   <script>
+
+    const arrays = {
+      fruits: ["りんご", "みかん", "バナナ", "ぶどう", "いちご"],
+      animals: ["ねこ", "いぬ", "うさぎ", "きつね", "くま"],
+      colors: ["赤", "青", "緑", "黄", "紫"]
+    };
+
+    const select = document.getElementById('arraySelect');
+    const customInput = document.getElementById('customInput');
+    const pickBtn = document.getElementById('pickBtn');
+    const resultEl = document.getElementById('result');
+
+    // 配列名からランダムで要素を返す関数
+    function pickRandomFromArray(arr) {
+      if (!Array.isArray(arr) || arr.length === 0) return null;
+      const i = Math.floor(Math.random() * arr.length);
+      return arr[i];
+    }
+
+    // ボタン処理
+    pickBtn.addEventListener('click', () => {
+      const sel = select.value;
+      let sourceArray = [];
+
+      if (sel === 'custom') {
+        // カンマ区切りで分割して前後の空白を削除、空要素を除去
+        const raw = customInput.value;
+        sourceArray = raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      } else {
+        sourceArray = arrays[sel] || [];
+      }
+
+      const picked = pickRandomFromArray(sourceArray);
+      if (picked === null) {
+        resultEl.textContent = '要素がありません（配列を編集するか、custom に値を入れてください）';
+      } else {
+        resultEl.textContent = picked;
+      }
+    });
+
+    // Enter キーでボタンと同じ挙動にする（入力欄でもOK）
+    customInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        pickBtn.click();
+      }
+    });
+
+    // 初期表示（選択した配列の最初の要素などを出す場合はここを編集）
+    resultEl.textContent = '';
+
     // BGM 用の <audio> 要素（ループ）
     const bgm = new Audio('BGM.mp3');
     bgm.loop = true;
