@@ -65,7 +65,8 @@
 
     <div>
       <button id="startBtn" class="start">スタート（BGM再生）</button>
-      <button id="stopBtn" class="stop">停止（BGM停止）</button>
+      <button id="clearBtn" class="stop">クリア（BGM停止→クリア再生）</button>
+      <button id="gameOverBtn" class="stop">ゲームオーバー（BGM停止→ゲームオーバー再生）</button>
     </div>
 
     <div>
@@ -77,7 +78,6 @@
   </div>
 
   <script>
-
     const arrays = {
       easy: ["りんご", "みかん", "バナナ", "ぶどう", "いちご"],
       normal: ["ねこ", "いぬ", "うさぎ", "きつね", "くま"],
@@ -86,105 +86,68 @@
     };
 
     const select = document.getElementById('arraySelect');
-    const customInput = document.getElementById('customInput');
     const pickBtn = document.getElementById('pickBtn');
     const resultEl = document.getElementById('result');
 
-    // 配列名からランダムで要素を返す関数
     function pickRandomFromArray(arr) {
       if (!Array.isArray(arr) || arr.length === 0) return null;
       const i = Math.floor(Math.random() * arr.length);
       return arr[i];
     }
 
-    // ボタン処理
     pickBtn.addEventListener('click', () => {
       const sel = select.value;
-      let sourceArray = [];
-      sourceArray = arrays[sel] || [];
-
+      let sourceArray = arrays[sel] || [];
       const picked = pickRandomFromArray(sourceArray);
-      if (picked === null) {
-        resultEl.textContent = '要素がありません（配列を編集するか、custom に値を入れてください）';
-      } else {
-        resultEl.textContent = picked;
-      }
+      resultEl.textContent = picked || '要素がありません（配列を編集するか、custom に値を入れてください）';
     });
 
-    // BGM 用の <audio> 要素（ループ）
+    // BGM 用
     const bgm = new Audio('BGM.mp3');
     bgm.loop = true;
     bgm.preload = 'auto';
-    bgm.volume = 0.6; // 必要に応じて調整
+    bgm.volume = 0.6;
 
-    // 効果音は重ねて再生できるよう、新しい Audio インスタンスを毎回作る方式にする
     function playSFX(src, opts = {}) {
       try {
         const s = new Audio(src);
         s.preload = 'auto';
         if (opts.volume !== undefined) s.volume = opts.volume;
-        // 再生の promise を返す（失敗は catch で扱う）
         const p = s.play();
-        if (p !== undefined) {
-          p.catch(e => {
-            // autoplay 制限などのエラーをユーザーに知らせる
-            console.warn('SFX 再生に失敗しました:', e);
-            showMessage('ブラウザの制限で効果音の再生がブロックされました。ページ上で何かをクリックしてから再試行してください。');
-          });
-        }
-      } catch (err) {
-        console.error('playSFX エラー', err);
-      }
+        if (p !== undefined) p.catch(e => console.warn('SFX再生失敗:', e));
+      } catch (err) { console.error(err); }
     }
 
-    // UI 要素
     const startBtn = document.getElementById('startBtn');
-    const stopBtn  = document.getElementById('stopBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const gameOverBtn = document.getElementById('gameOverBtn');
     const correctBtn = document.getElementById('correctBtn');
-    const wrongBtn   = document.getElementById('wrongBtn');
-    const messageEl  = document.getElementById('message');
+    const wrongBtn = document.getElementById('wrongBtn');
 
-    function showMessage(text) {
-      messageEl.textContent = text;
-      setTimeout(() => {
-        messageEl.textContent = '音声ファイルはこのHTMLと同じフォルダに置いてください：BGM.mp3, 正解.mp3, 不正解.mp3';
-      }, 3500);
-    }
-
-    // スタート（ユーザー操作なので自動再生ブロックは回避できるはず）
     startBtn.addEventListener('click', async () => {
-      try {
-        await bgm.play();
-        showMessage('BGM を再生中（ループ）');
-      } catch (err) {
-        console.warn('BGM 再生失敗:', err);
-        showMessage('BGM の再生がブロックされました。画面を操作してから再度試してください。');
-      }
+      try { await bgm.play(); } catch(err) { console.warn('BGM再生失敗', err); }
     });
 
-    // 停止
-    stopBtn.addEventListener('click', () => {
+    function stopBGMAndPlay(src) {
       bgm.pause();
       bgm.currentTime = 0;
-      showMessage('BGM を停止しました');
-    });
+      const s = new Audio(src);
+      s.preload = 'auto';
+      s.volume = 0.6;
+      s.play().catch(err => console.warn(src + ' 再生失敗', err));
+    }
 
-    // 正解ボタン（BGM再生中でも別音で鳴る）
-    correctBtn.addEventListener('click', () => {
-      playSFX('正解.mp3', { volume: 1.0 });
-    });
+    clearBtn.addEventListener('click', () => stopBGMAndPlay('クリア.mp3'));
+    gameOverBtn.addEventListener('click', () => stopBGMAndPlay('ゲームオーバー.mp3'));
 
-    // 不正解ボタン（BGM再生中でも別音で鳴る）
-    wrongBtn.addEventListener('click', () => {
-      playSFX('不正解.mp3', { volume: 1.0 });
-    });
+    correctBtn.addEventListener('click', () => playSFX('正解.mp3', {volume:1.0}));
+    wrongBtn.addEventListener('click', () => playSFX('不正解.mp3', {volume:1.0}));
 
-    // （オプション）ページ離脱時に音を止める
     window.addEventListener('beforeunload', () => {
       bgm.pause();
       bgm.currentTime = 0;
     });
-    
+
     resultEl.textContent = '';
   </script>
 </body>
