@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <title>ネプリーグ　ファイブボンバー</title>
+  <title>ネプリーグ　ファイブボンバー　BGM</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     body {
@@ -30,19 +30,8 @@
       border: none;
       cursor: pointer;
     }
-    
-    select {
-      font-size: 16px;
-      padding: 8px;
-      margin: 8px 0;
-      width: 100%;
-      box-sizing: border-box;
-      border-radius: 8px;
-      border: 1px solid #ddd;
-    }
     h1 { font-size: 28px; margin: 18px 0; min-height: 40px; }
     .small { font-size: 13px; color:#666; }
-    
     button:active { transform: translateY(1px); }
     .start { background:#3b82f6; color:white; }
     .stop  { background:#ef4444; color:white; }
@@ -53,53 +42,18 @@
 </head>
 <body>
   <div class="panel" role="region" aria-label="サウンドコントロール">
-
-    <select id="arraySelect" aria-label="配列選択">
-      <option value="easy">簡単</option>
-      <option value="difficult">難しい</option>
-      <option value="impossible">鬼むず</option>
-    </select>
-    <button id="pickBtn">問題を表示</button>
-    <h1 id="result" aria-live="polite"></h1>
-
     <div>
       <button id="startBtn" class="start">スタート</button>
       <button id="clearBtn" class="stop">クリア</button>
       <button id="gameOverBtn" class="stop">ゲームオーバー</button>
     </div>
-
     <div>
       <button id="correctBtn" class="sfx-ok">正解</button>
       <button id="wrongBtn" class="sfx-ng">不正解</button>
     </div>
-
-    <!--<div class="note" id="message">音声ファイルはこのHTMLと同じフォルダに置いてください：BGM.mp3, 正解.mp3, 不正解.mp3</div>-->
   </div>
 
   <script>
-    const arrays = {
-      easy: ["犬の種類", "学校にあるもの", "果物", "学校行事", "ニンテンドーキャラ", "人気ユーチューバー", "スポーツ", "偉人", "祝日", "山", "アニメ", "カップ麺の種類", "オリンピックの競技種目", "ことわざに出てくる動物", "楽器の種類", "世界の言語", "SNSの種類", "お茶の種類", "数学の公式", "季語"],
-      difficult: ["世界遺産", "世界の首都", "世界の古代文明", "スポーツ選手", "世界の大国", "太陽系の惑星"],
-      impossible: ["コンビニ", "ノーベル賞受賞者", "数字が入っている四字熟語", "古典文学", "山手線", "歴代総理大臣", "元素記号", "有名な金属", "NBAの選手", "ハリウッドスター"]
-    };
-
-    const select = document.getElementById('arraySelect');
-    const pickBtn = document.getElementById('pickBtn');
-    const resultEl = document.getElementById('result');
-
-    function pickRandomFromArray(arr) {
-      if (!Array.isArray(arr) || arr.length === 0) return null;
-      const i = Math.floor(Math.random() * arr.length);
-      return arr[i];
-    }
-
-    pickBtn.addEventListener('click', () => {
-      const sel = select.value;
-      let sourceArray = arrays[sel] || [];
-      const picked = pickRandomFromArray(sourceArray);
-      resultEl.textContent = picked || '要素がありません（配列を編集するか、custom に値を入れてください）';
-    });
-
     // BGM 用
     const bgm = new Audio('BGM.mp3');
     bgm.loop = true;
